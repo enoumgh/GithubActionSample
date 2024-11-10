@@ -7,8 +7,9 @@ from bs4 import BeautifulSoup
 # 从测试号信息获取
 appID = os.environ.get("APP_ID")
 appSecret = os.environ.get("APP_SECRET")
-# 收信人ID列表，即多个用户的微信号
-openIds = os.environ.get("OPEN_IDS").split(",")  # 将多个用户ID存入环境变量，逗号分隔
+
+# 收信人ID列表，即多个用户的微信号，默认使用空字符串防止 split 出错
+openIds = os.environ.get("OPEN_IDS", "").split(",") if os.environ.get("OPEN_IDS") else []
 # 天气预报模板ID
 weather_template_id = os.environ.get("TEMPLATE_ID")
 
@@ -48,7 +49,6 @@ def get_weather(my_city):
                     
                     return this_city, temp, weather_typ, wind
 
-
 def get_access_token():
     url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={}&secret={}' \
         .format(appID.strip(), appSecret.strip())
@@ -56,14 +56,12 @@ def get_access_token():
     access_token = response.get('access_token')
     return access_token
 
-
 def get_daily_love():
     url = "https://api.lovelive.tools/api/SweetNothings/Serialization/Json"
     r = requests.get(url)
     all_dict = json.loads(r.text)
     sentence = all_dict['returnObj'][0]
     return sentence
-
 
 def send_weather(access_token, weather):
     import datetime
@@ -102,7 +100,6 @@ def send_weather(access_token, weather):
         url = f'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={access_token}'
         print(requests.post(url, json.dumps(body)).text)
 
-
 def weather_report(this_city):
     access_token = get_access_token()
     weather = get_weather(this_city)
@@ -111,7 +108,6 @@ def weather_report(this_city):
         send_weather(access_token, weather)
     else:
         print("无法获取天气信息")
-
 
 if __name__ == '__main__':
     weather_report("济南")
