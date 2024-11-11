@@ -75,20 +75,17 @@ def get_daily_love():
     return daily_love
 
 def send_weather(access_token, weather):
-    # 获取今天的日期
     import datetime
     today = datetime.date.today()
     today_str = today.strftime("%Y年%m月%d日")
 
-    # 检查openIds是否为空或未配置
     if not openIds or openIds == [""]:
         print("Error: OPEN_IDS 环境变量未设置或为空")
         return
 
-    # 为每个用户发送消息
     for openId in openIds:
-        openId = openId.strip()
-        if openId:  # 过滤掉空值
+        openId = openId.strip().replace('"', '')  # 去除多余的引号和空格
+        if openId:
             body = {
                 "touser": openId,
                 "template_id": weather_template_id.strip(),
@@ -117,6 +114,7 @@ def send_weather(access_token, weather):
             url = 'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}'.format(access_token)
             response = requests.post(url, json.dumps(body)).text
             print(f"发送至 {openId}: {response}")
+
 
 def weather_report(this_city):
     # 1.获取access_token
