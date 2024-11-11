@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 # 从测试号信息获取
 appID = os.environ.get("APP_ID")
 appSecret = os.environ.get("APP_SECRET")
-# 收信人ID即 用户列表中的微信号
-openId = os.environ.get("OPEN_ID")
+# 收信人ID列表，以逗号分隔
+openIds = os.environ.get("OPEN_IDS", "").split(",")
 # 天气预报模板ID
 weather_template_id = os.environ.get("TEMPLATE_ID")
 
@@ -35,7 +35,6 @@ def get_weather(my_city):
                 city_td = tds[-8]
                 this_city = list(city_td.stripped_strings)[0]
                 if this_city == my_city:
-
                     high_temp_td = tds[-5]
                     low_temp_td = tds[-2]
                     weather_type_day_td = tds[-7]
@@ -57,7 +56,6 @@ def get_weather(my_city):
                     wind = f"{wind_day}" if wind_day != "--" else f"{wind_night}"
                     return this_city, temp, weather_typ, wind
 
-
 def get_access_token():
     # 获取access token的url
     url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={}&secret={}' \
@@ -66,7 +64,6 @@ def get_access_token():
     print(response)
     access_token = response.get('access_token')
     return access_token
-
 
 def get_daily_love():
     # 每日一句情话
@@ -77,46 +74,49 @@ def get_daily_love():
     daily_love = sentence
     return daily_love
 
-
 def send_weather(access_token, weather):
-    # touser 就是 openID
-    # template_id 就是模板ID
-    # url 就是点击模板跳转的url
-    # data就按这种格式写，time和text就是之前{{time.DATA}}中的那个time，value就是你要替换DATA的值
-
+    # 获取今天的日期
     import datetime
     today = datetime.date.today()
     today_str = today.strftime("%Y年%m月%d日")
 
-    body = {
-        "touser": openId.strip(),
-        "template_id": weather_template_id.strip(),
-        "url": "https://weixin.qq.com",
-        "data": {
-            "date": {
-                "value": today_str
-            },
-            "region": {
-                "value": weather[0]
-            },
-            "weather": {
-                "value": weather[2]
-            },
-            "temp": {
-                "value": weather[1]
-            },
-            "wind_dir": {
-                "value": weather[3]
-            },
-            "today_note": {
-                "value": get_daily_love()
+    # 检查openIds是否为空或未配置
+    if not openIds or openIds == [""]:
+        print("Error: OPEN_IDS 环境变量未设置或为空")
+        return
+
+    # 为每个用户发送消息
+    for openId in openIds:
+        openId = openId.strip()
+        if openId:  # 过滤掉空值
+            body = {
+                "touser": openId,
+                "template_id": weather_template_id.strip(),
+                "url": "https://weixin.qq.com",
+                "data": {
+                    "date": {
+                        "value": today_str
+                    },
+                    "region": {
+                        "value": weather[0]
+                    },
+                    "weather": {
+                        "value": weather[2]
+                    },
+                    "temp": {
+                        "value": weather[1]
+                    },
+                    "wind_dir": {
+                        "value": weather[3]
+                    },
+                    "today_note": {
+                        "value": get_daily_love()
+                    }
+                }
             }
-        }
-    }
-    url = 'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}'.format(access_token)
-    print(requests.post(url, json.dumps(body)).text)
-
-
+            url = 'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}'.format(access_token)
+            response = requests.post(url, json.dumps(body)).text
+            print(f"发送至 {openId}: {response}")
 
 def weather_report(this_city):
     # 1.获取access_token
@@ -126,8 +126,6 @@ def weather_report(this_city):
     print(f"天气信息： {weather}")
     # 3. 发送消息
     send_weather(access_token, weather)
-
-
 
 if __name__ == '__main__':
     weather_report("济南")
