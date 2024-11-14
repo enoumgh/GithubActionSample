@@ -1,6 +1,4 @@
 requests
-bs4
-html5lib
-os
-json
 certifi
+beautifulsoup4
+html5lib
