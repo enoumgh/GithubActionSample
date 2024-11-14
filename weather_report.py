@@ -1,9 +1,9 @@
-# 安装依赖 pip3 install requests html5lib bs4 schedule certifi
 import os
 import requests
 import json
 import certifi
 from bs4 import BeautifulSoup
+import time  # 导入time模块
 
 # 从测试号信息获取
 appID = os.environ.get("APP_ID")
@@ -13,7 +13,12 @@ openIds = os.environ.get("OPEN_IDS", "").split(",")
 # 天气预报模板ID
 weather_template_id = os.environ.get("TEMPLATE_ID")
 
+def log_time(message):
+    """打印当前时间和消息"""
+    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}")
+
 def get_weather(my_city):
+    log_time("开始获取天气信息")
     urls = ["http://www.weather.com.cn/textFC/hb.shtml",
             "http://www.weather.com.cn/textFC/db.shtml",
             "http://www.weather.com.cn/textFC/hd.shtml",
@@ -53,23 +58,26 @@ def get_weather(my_city):
                     temp = f"{low_temp}——{high_temp}摄氏度" if high_temp != "-" else f"{low_temp}摄氏度"
                     weather_typ = weather_typ_day if weather_typ_day != "-" else weather_type_night
                     wind = f"{wind_day}" if wind_day != "--" else f"{wind_night}"
+                    log_time("完成获取天气信息")
                     return this_city, temp, weather_typ, wind
 
 def get_access_token():
+    log_time("开始获取access token")
     url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={}&secret={}' \
         .format(appID.strip(), appSecret.strip())
     response = requests.get(url).json()
     print(response)
     access_token = response.get('access_token')
+    log_time("完成获取access token")
     return access_token
 
 def get_daily_love():
+    log_time("开始获取一言")
     url = "https://v1.hitokoto.cn"
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        # 添加重试机制
         from requests.adapters import HTTPAdapter
         from requests.packages.urllib3.util.retry import Retry
         from requests.packages.urllib3.poolmanager import PoolManager
@@ -88,7 +96,6 @@ def get_daily_love():
         adapter = TLSAdapter()
         session.mount('https://', adapter)
         
-        # 使用session发送请求
         r = session.get(
             url,
             headers=headers,
@@ -96,14 +103,13 @@ def get_daily_love():
         )
         
         response_data = r.json()
-        # 获取基本信息
         hitokoto = response_data['hitokoto']
         source = response_data.get('from', '未知')
         author = response_data.get('from_who')
 
-        # 根据是否有作者信息来格式化输出
         result = f"{hitokoto} ——《{source}》{author}" if author else f"{hitokoto} ——《{source}》"
-        print(f"\n获取到的一言: {result}")  # 添加这行来打印一言内容
+        print(f"\n获取到的一言: {result}")
+        log_time("完成获取一言")
         return result
 
     except Exception as e:
@@ -111,6 +117,7 @@ def get_daily_love():
         return "今天也要开开心心哦！"
 
 def send_weather(access_token, weather):
+    log_time("开始发送天气信息")
     import datetime
     today = datetime.date.today()
     today_str = today.strftime("%Y年%m月%d日")
@@ -119,7 +126,6 @@ def send_weather(access_token, weather):
         print("Error: OPEN_IDS 环境变量未设置或为空")
         return
 
-    # 在循环外获取一言
     daily_message = get_daily_love()
 
     for openId in openIds:
@@ -146,22 +152,22 @@ def send_weather(access_token, weather):
                         "value": weather[3]
                     },
                     "today_note": {
-                        "value": daily_message  # 使用已获取的一言
+                        "value": daily_message
                     }
                 }
             }
             url = 'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={}'.format(access_token)
             response = requests.post(url, json.dumps(body)).text
             print(f"发送至 {openId}: {response}")
+    log_time("完成发送天气信息")
 
 def weather_report(this_city):
-    # 1.获取access_token
+    log_time("开始天气报告")
     access_token = get_access_token()
-    # 2. 获取天气
     weather = get_weather(this_city)
     print(f"天气信息： {weather}")
-    # 3. 发送消息
     send_weather(access_token, weather)
+    log_time("完成天气报告")
 
 if __name__ == '__main__':
     weather_report("济南")
