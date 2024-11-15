@@ -103,14 +103,11 @@ def get_daily_love():
         )
         
         response_data = r.json()
-        hitokoto = response_data['hitokoto']
-        source = response_data.get('from', '未知')
-        author = response_data.get('from_who')
+        hitokoto = response_data['hitokoto']  # 只获取一言内容
 
-        result = f"{hitokoto} ——《{source}》{author}" if author else f"{hitokoto} ——《{source}》"
-        print(f"\n获取到的一言: {result}")
+        print(f"\n获取到的一言: {hitokoto}")
         log_time("完成获取一言")
-        return result
+        return hitokoto  # 直接返回一言内容
 
     except Exception as e:
         print(f"获取一言API失败：{str(e)}")
